@@ -15,6 +15,4 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-add_executable(proto proto.cpp)
-add_executable(proto2 proto2.cpp)
-add_executable(proto3 proto3.cpp)
+add_executable(client client.cpp)
