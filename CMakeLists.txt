@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.27)
 
-project(proto)
+project(client)
 
 if (CMAKE_CXX_COMPILER_LOADED)
   message(STATUS "The C++ compiler ID is ${CMAKE_CXX_COMPILER_ID}")
@@ -16,3 +16,4 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 add_executable(client client.cpp)
+		      

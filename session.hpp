@@ -1,5 +1,7 @@
 #ifndef __SESSION_HPP__
 #define __SESSION_HPP__
+
+#define DEBUG 1
  
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -24,6 +26,10 @@
 #include <iterator>
 #include <algorithm>
 #include <cassert>
+
+const std::string NAME = "Charles Pehlivanian";
+const std::string EMAIL = "pehlivaniancharles@gmail.com";
+const std::string REPO = "https://github.com/pehlivanian/HFT_Challenge_1";
 
 uint16_t checksum16(const uint8_t* buf, uint32_t len) {
   uint32_t sum = 0;
@@ -119,7 +125,7 @@ namespace {
     }
     return os;
   }
-
+  
   typedef struct __attribute__((packed)) {
     char MsgType;			//  1
     uint16_t MsgLen;		// +2
@@ -160,6 +166,14 @@ namespace {
     char Reason[32];		// +32 = 45
   } logout_response;
 
+  std::ostream& operator<<(std::ostream& os, header h) {
+    os << "    MsgType:   " << h.MsgType << "\n"
+       << "    MsgLen:    " << h.MsgLen << "\n"
+       << "    Timestamp: " << h.Timestamp << "\n"
+       << "    ChkSum:    " << h.ChkSum;
+    return os;
+  }
+
 } // namespace
 
 template<typename T>
@@ -180,7 +194,15 @@ public:
   void assert_current_state(STATES s) const { assert(current_state_ == s); }
 
   void set_state_and_transition(STATES s, EVENTS e) {
-    
+#ifdef DEBUG
+    std::stringstream ss;
+    ss << "Current state: [";
+    ss << get_current_state() << "] ";
+    ss << "Event: [";
+    ss << e << "] ====> ";
+    ss << s << std::endl;
+    std::cout << ss.str();
+#endif
     set_current_state(s);
     transition(e);
   }
@@ -223,13 +245,12 @@ public:
       send_(login);
       receive_(lr);
       if (lr.Code == 'Y') {
-	std::cerr << lr.Reason << std::endl;
+	std::cerr << " successful.\n";
+	set_state_and_transition(STATES::LOGIN_ACKED, EVENTS::E);
       } else {
 	throw std::runtime_error("Failed to login");
       }
     }
-
-    set_state_and_transition(STATES::LOGIN_ACKED, EVENTS::E);
     
   }
 
@@ -238,7 +259,6 @@ public:
     assert_current_state(STATES::LOGIN_ACKED);
 
     auto submission = create_submission();
-    
     send_(submission);
 
     set_state_and_transition(STATES::SUBMISSION_SENT, EVENTS::S);
@@ -252,10 +272,13 @@ public:
     submission_response sr;
     receive_(sr);
 
-    token_ = std::string(sr.Token);
+    if (sr.Header.MsgType == 'G') {
+      set_state_and_transition(STATES::END, EVENTS::G);
+    } else {
+      token_ = std::string(sr.Token);
+      set_state_and_transition(STATES::SUBMISSION_ACKED, EVENTS::R);
+    }
 
-    set_state_and_transition(STATES::SUBMISSION_ACKED, EVENTS::O);
-  
   }
 
   void send_logout(EVENTS) {
@@ -452,10 +475,15 @@ private:
   template<typename M>
   int send_(const M& m) {
 
+#ifdef DEBUG
+    std::cerr << "SENDING MESSAGE OF TYPE: " << typeid(m).name() << std::endl;
+#endif
+
     constexpr std::size_t msg_size = sizeof(m);
     char msg[msg_size];
     memset(msg, '\0', msg_size);
     memcpy(msg, &m, msg_size);
+
     int result = send(sockfd_, msg, msg_size, 0);
     
     return result;
@@ -471,7 +499,9 @@ private:
     int result = read(sockfd_, response, msg_size);
     
     memcpy(&m, response, msg_size);
-    
+
+    validate_checksum(m);
+
     return result;
     
   }
@@ -481,21 +511,26 @@ private:
     uint16_t checksum = checksum16((uint8_t *)&m, sizeof(m));
     m.Header.ChkSum = checksum;
   }
+  
+  template<typename M>
+  bool validate_checksum(M& m) {
+    uint16_t checksum_wire = m.Header.ChkSum;
+    m.Header.ChkSum = 0;
+    uint16_t checksum_tgt = checksum16((uint8_t *)&m, sizeof(m));
+    // std::cout << "checksum_wire: " << checksum_wire << ""
+    // 	      << "checksum_target: " << checksum_tgt << "\n";
+    return checksum_wire == checksum_tgt;
+  }
 
   login_request create_login() {
-
-    header header_ = create_header('L', 109);
     login_request login_;
-
-    char User[64], Password[32];
-    strcpy(User, "nyc417@protonmail.com");
-    strcpy(Password, "pwd123");
+    header header_ = create_header('L', 109);
 
     login_.Header = header_;
     bzero(login_.User, sizeof(login_.User));
     bzero(login_.Password, sizeof(login_.Password));
-    strcpy(login_.User, User);
-    strcpy(login_.Password, Password);
+    strcpy(login_.User, "pehlivaniancharles@gmail.com");
+    strcpy(login_.Password, "pwd123");
 
     add_checksum(login_);
 
@@ -504,21 +539,24 @@ private:
   
   submission_request create_submission() {
 
-    header header_ = create_header('S', 205);
     submission_request submission_;
+    header header_ = create_header('S', 205);
 
-    char Name[64], Email[64], Repo[64];
-    strcpy(Name, "Charles Pehlivanian");
-    strcpy(Email, "nyc417@protonmail.com");
-    strcpy(Repo, "https://github.com/HFT_Challenge1");
-    
+  typedef struct __attribute__((packed)) {
+    header Header{};		//  13
+    char Name[64];		// +64
+    char Email[64];		// +64
+    char Repo[64];		// +64 = 205
+  } submission_request;
+
+
     submission_.Header = header_;
     bzero(submission_.Name, sizeof(submission_.Name));
     bzero(submission_.Email, sizeof(submission_.Email));
     bzero(submission_.Repo, sizeof(submission_.Repo));
-    strcpy(submission_.Name, Name);
-    strcpy(submission_.Email, Email);
-    strcpy(submission_.Repo, Repo);
+    strcpy(submission_.Name, "Charles Pehlivanian");
+    strcpy(submission_.Email, "pehlivaniancharles@gmail.com");
+    strcpy(submission_.Repo, "https://github.com/pehlivanian/HFT_Challenge_1.git");
 
     add_checksum(submission_);
 
@@ -527,9 +565,9 @@ private:
   }
 
   logout_request create_logout() {
-  
+
+    logout_request logout_; 
     header header_ = create_header('O', 46);
-    logout_request logout_;
     
     logout_.Header = header_;
     
