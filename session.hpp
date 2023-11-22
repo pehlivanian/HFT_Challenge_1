@@ -1,3 +1,6 @@
+#ifndef __SESSION_HPP__
+#define __SESSION_HPP__
+ 
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <netinet/in.h>
@@ -35,99 +38,129 @@ uint16_t checksum16(const uint8_t* buf, uint32_t len) {
   return uint16_t(~sum);
 }
 
-enum class STATES {
-  START = 0,
-    LOGIN_SENT = 1,
-    LOGIN_ACKED = 2,
-    SUBMISSION_SENT = 3,
-    SUBMISSION_ACKED = 4,
-    LOGOUT_SENT = 5,
-    LOGGED_OUT = 6,
-    END = 7,
-    NUMSTATES
-    };
-enum class EVENTS {
-  L = 0,
-    E = 1,
-    O = 2,
-    G = 3,
-    S = 4,
-    R = 5,
-    NUMEVENTS
-    };
+namespace {
+  enum class STATES {
+    START = 0,
+      LOGIN_SENT = 1,
+      LOGIN_ACKED = 2,
+      SUBMISSION_SENT = 3,
+      SUBMISSION_ACKED = 4,
+      LOGOUT_SENT = 5,
+      LOGGED_OUT = 6,
+      END = 7,
+      NUMSTATES
+      };
+  enum class EVENTS {
+    L = 0,
+      E = 1,
+      O = 2,
+      G = 3,
+      S = 4,
+      R = 5,
+      NUMEVENTS
+      };
 
-std::ostream& operator<<(std::ostream& os, STATES s) {
-  os << "CURRENT STATE: ";
-  switch (s) {
-  case (STATES::START):
-    os << "START";
-    break;
-  case (STATES::LOGIN_SENT):
-    os << "LOGIN_SENT";
-    break;
-  case (STATES::LOGIN_ACKED):
-    os << "LOGIN_ACKED";
-    break;
-  case (STATES::SUBMISSION_SENT):
-    os << "SUBMISSION_SENT";
-    break;
-  case (STATES::SUBMISSION_ACKED):
-    os << "SUBMISSION_ACKED";
-    break;
-  case (STATES::LOGOUT_SENT):
-    os << "LOGOUT_SENT";
-    break;
-  case (STATES::LOGGED_OUT):
-    os << "LOGGED_OUT";
-    break;
-  case (STATES::END):
-    os << "END";
-    break;
-  default:
-    break;
+  std::ostream& operator<<(std::ostream& os, STATES s) {
+    switch (s) {
+    case (STATES::START):
+      os << "START";
+      break;
+    case (STATES::LOGIN_SENT):
+      os << "LOGIN_SENT";
+      break;
+    case (STATES::LOGIN_ACKED):
+      os << "LOGIN_ACKED";
+      break;
+    case (STATES::SUBMISSION_SENT):
+      os << "SUBMISSION_SENT";
+      break;
+    case (STATES::SUBMISSION_ACKED):
+      os << "SUBMISSION_ACKED";
+      break;
+    case (STATES::LOGOUT_SENT):
+      os << "LOGOUT_SENT";
+      break;
+    case (STATES::LOGGED_OUT):
+      os << "LOGGED_OUT";
+      break;
+    case (STATES::END):
+      os << "END";
+      break;
+    default:
+      os << "UNKNOWN STATE";
+      break;
+    }
+    return os;
   }
-  return os;
-}
 
-typedef struct __attribute__((packed)) {
-  char MsgType;			//  1
-  uint16_t MsgLen;		// +2
-  unsigned long Timestamp;	// +8
-  uint16_t ChkSum;		// +2 = 13
-} header;
+  std::ostream& operator<<(std::ostream& os, EVENTS e) {
+    switch (e) {
+    case (EVENTS::L):
+      os << "LOGIN_REQUEST";
+      break;
+    case (EVENTS::E):
+      os << "LOGIN_RESPONSE";
+      break;
+    case (EVENTS::O):
+      os << "LOGOUT_REQUEST";
+      break;
+    case (EVENTS::G):
+      os << "LOGOUT_RESPONSE";
+      break;
+    case (EVENTS::S):
+      os << "SUBMISSION_REQUEST";
+      break;
+    case (EVENTS::R):
+      os << "SUBMISSION_RESPONSE";
+      break;
+    default:
+      os << "UNKNOWN EVENT";
+      break;
+    }
+    return os;
+  }
 
-typedef struct __attribute__((packed)) {
-  header Header{};		//  13
-  char User[64];		// +64
-  char Password[32];		// +32 = 109
-} login_request;
+  typedef struct __attribute__((packed)) {
+    char MsgType;			//  1
+    uint16_t MsgLen;		// +2
+    unsigned long Timestamp;	// +8
+    uint16_t ChkSum;		// +2 = 13
+  } header;
 
-typedef struct __attribute__((packed)) {
-  header Header{};		//  13
-  char Code;			//  +1
-  char Reason[32];		// +32 = 46
-} login_response;
+  typedef struct __attribute__((packed)) {
+    header Header{};		//  13
+    char User[64];		// +64
+    char Password[32];		// +32 = 109
+  } login_request;
 
-typedef struct __attribute__((packed)) {
-  header Header{};		//  13
-  char Name[64];		// +64
-  char Email[64];		// +64
-  char Repo[64];		// +64 = 205
-} submission_request;
+  typedef struct __attribute__((packed)) {
+    header Header{};		//  13
+    char Code;			//  +1
+    char Reason[32];		// +32 = 46
+  } login_response;
 
-typedef struct __attribute__((packed)) {
-  header Header{};		//  13
-  char Token[32];		// +32 = 45
-} submission_response;
+  typedef struct __attribute__((packed)) {
+    header Header{};		//  13
+    char Name[64];		// +64
+    char Email[64];		// +64
+    char Repo[64];		// +64 = 205
+  } submission_request;
 
-typedef struct __attribute__((packed)) {
-  header Header{};		// 13 = 13
-} logout_request;
+  typedef struct __attribute__((packed)) {
+    header Header{};		//  13
+    char Token[32];		// +32 = 45
+  } submission_response;
 
-typedef struct __attribute__((packed)) {
-  header Header{};		//  13
-  char Reason[32];		// +32 = 45
-} logout_response;
+  typedef struct __attribute__((packed)) {
+    header Header{};		// 13 = 13
+  } logout_request;
+
+  typedef struct __attribute__((packed)) {
+    header Header{};		//  13
+    char Reason[32];		// +32 = 45
+  } logout_response;
+
+} // namespace
 
 template<typename T>
 class FSM {
@@ -147,6 +180,7 @@ public:
   void assert_current_state(STATES s) const { assert(current_state_ == s); }
 
   void set_state_and_transition(STATES s, EVENTS e) {
+    
     set_current_state(s);
     transition(e);
   }
@@ -160,21 +194,16 @@ private:
 
 class Session : public FSM<Session> {
 public:
+
   Session(char* hostname, int port) : hostname_{hostname}, port_{port} { init(); }
 
   void send_login(STATES, EVENTS) {
     assert_current_state(STATES::START);
 
-    std::cout << "LOGGING IN\n";
-
     auto login = create_login();
 
-    char msg_flat[109];
-    memset(msg_flat, '\0', sizeof(msg_flat));
-    memcpy(msg_flat, &login, sizeof(msg_flat));
-    send(sockfd_, msg_flat, sizeof(msg_flat), 0);
-    std::cout << "Sent login...\n";
-    
+    send_(login);
+
     set_state_and_transition(STATES::LOGIN_SENT, EVENTS::E);
 
   };
@@ -183,17 +212,8 @@ public:
 
     assert_current_state(STATES::LOGIN_SENT);
 
-    char response[46];
-    memset(response, '\0', sizeof(response));
-    int result = read(sockfd_, response, 46);
-
-    printf("\nresponse in hex: %x\n", response);
-    
     login_response lr;
-    memcpy(&lr, response, sizeof(lr));
-
-    std::cout << "Code: " << lr.Code << std::endl;
-    printf("Reason: %x\n", *(lr.Reason));    
+    receive_(lr);
 
     set_state_and_transition(STATES::LOGIN_ACKED, EVENTS::E);
     
@@ -205,11 +225,7 @@ public:
 
     auto submission = create_submission();
     
-    char msg_flat[205];
-    memset(msg_flat, '\0', sizeof(msg_flat));
-    memcpy(msg_flat, &submission, sizeof(msg_flat));
-    send(sockfd_, msg_flat, sizeof(msg_flat), 0);
-    std::cout << "Sent submission...\n";
+    send_(submission);
 
     set_state_and_transition(STATES::SUBMISSION_SENT, EVENTS::S);
 
@@ -217,18 +233,12 @@ public:
 
   void submission_acked(STATES, EVENTS) {
     
-    std::cout << "SUBMISSION_ACKED\n";
-
     assert_current_state(STATES::SUBMISSION_SENT);
 
-    char response[45];
-    memset(response, '\0', sizeof(response));
-    int result = read(sockfd_, response, 45);
-
     submission_response sr;
-    memcpy(&sr, response, sizeof(sr));
+    receive_(sr);
 
-    std::cout << "token: " << sr.Token << std::endl;
+    token_ = std::string(sr.Token);
 
     set_state_and_transition(STATES::SUBMISSION_ACKED, EVENTS::O);
   
@@ -240,11 +250,7 @@ public:
 
     logout_request logout = create_logout();
 
-    char msg_flat[13];
-    memset(msg_flat, '\0', sizeof(msg_flat));
-    memcpy(msg_flat, &logout, sizeof(msg_flat));
-    send(sockfd_, msg_flat, sizeof(msg_flat), 0);
-    std::cout << "Sent logout...\n";
+    send_(logout);
 
     set_state_and_transition(STATES::LOGOUT_SENT, EVENTS::O);
     
@@ -254,26 +260,24 @@ public:
     
     assert_current_state(STATES::LOGOUT_SENT);
 
-    char response[45];
-    memset(response, '\0', sizeof(response));
-    int result = read(sockfd_, response, 45);
-
     logout_response lr;
-    memcpy(&lr, response, sizeof(lr));
-
-    std::cout << "Logout reason: " << lr.Reason << std::endl;
+    receive_(lr);
 
     set_state_and_transition(STATES::LOGGED_OUT, EVENTS::G);
 
-
   }
 
-  void end(STATES, EVENTS) { std::cout << "THIS IS ONLY THE END...\n"; }; 
+  void end(STATES, EVENTS) { 
+    assert_current_state(STATES::LOGGED_OUT);
+
+    std::cout << "Session complete.\nYour token is: " << token_ << std::endl;
+  }; 
 
   void transition_(EVENTS e) override {
-    auto state = static_cast<std::underlying_type_t<STATES>>(get_current_state());
+    auto s = get_current_state();
+    auto state = static_cast<std::underlying_type_t<STATES>>(s);
     auto event = static_cast<std::underlying_type_t<EVENTS>>(e);
-    (*this.*M[state][event])(get_current_state(), e);
+    (*this.*M[state][event])(s, e);
   }
 
 private:
@@ -282,6 +286,7 @@ private:
   int port_;
   std::string IP_addr_;
   int sockfd_;
+  std::string token_;
 
   int init() {
 
@@ -299,9 +304,6 @@ private:
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_port = htons(port_);
     
-    std::cerr << IP_addr_.c_str() << std::endl;
-    std::cerr << port_ << std::endl;
-
     if(inet_pton(AF_INET, IP_addr_.c_str(), &serv_addr.sin_addr)<=0)
       {
 	printf("\n inet_pton error occured\n");
@@ -314,7 +316,6 @@ private:
 	return 1;
       } 
     
-    printf("\nSuccessful handshake...\n");
 
     set_state_and_transition(STATES::START, EVENTS::L);
 
@@ -351,9 +352,12 @@ private:
 	  break;
 	case AF_INET6:
 	  break;
-      }
+	}
 
       char* token = strtok(addrstr, ".");
+      // There is probably a better way to do this; 
+      // reverse lookup by IP does not work so we just 
+      // filter out gateways
       if (strcmp(token, "192") && strcmp(token, "127")) {
 	inet_ntop(res->ai_family, ptr, addrstr, 100);
 	IP_addr_ = std::string(addrstr);
@@ -374,7 +378,13 @@ private:
     return UTC;
   }
 
-  void err(STATES, EVENTS) {};
+  void err(STATES s, EVENTS e) {
+    std::stringstream r;
+    r << "Error: received event [";
+    r << e; r << "] while in state [";
+    r << s; r << "]";
+    throw std::runtime_error(r.str());
+  };
 
   typedef void (Session::*memfn)(STATES, EVENTS);
 
@@ -388,21 +398,21 @@ private:
 #define er &Session::err
  
   std::vector<std::vector<memfn>> M =
-    // EVENTS					
-    // ======
-    // L ~ LOGIN REQUEST
-    // E ~ LOGIN RESPONSE
-    // O ~ LOGOUT REQUEST
-    // G ~ LOGOUT RESPONSE
-    // S ~ SUBMISSION REQUEST
-    // R ~ SUBMISSION RESPONSE
-				     // STATES
-    //   L   E   O   G   S   R       // ======
-    { { sl, er, sl, sl, sl, sl },    // 0 ~ START
+		 // EVENTS					
+		 // ======
+		 // L ~ LOGIN REQUEST
+		 // E ~ LOGIN RESPONSE
+		 // O ~ LOGOUT REQUEST
+		 // G ~ LOGOUT RESPONSE
+		 // S ~ SUBMISSION REQUEST
+		 // R ~ SUBMISSION RESPONSE
+		 // STATES
+		 //   L   E   O   G   S   R       // ======
+    { { sl, er, er, er, er, er },    // 0 ~ START
       { er, la, la, la, la, la },    // 1 ~ LOGIN_SENT
-      { er, ss, ss, ss, ss, ss },    // 2 ~ LOGIN_ACKED
-      { er, er, sa, sa, sa, sa },    // 3 ~ SUBMISSION_SENT
-      { er, er, so, so, so, so },    // 4 ~ SUBMISSION_ACKED
+      { er, ss, so, er, er, er },    // 2 ~ LOGIN_ACKED
+      { er, er, er, er, sa, sa },    // 3 ~ SUBMISSION_SENT
+      { er, er, so, er, so, so },    // 4 ~ SUBMISSION_ACKED
       { er, er, oa, oa, oa, oa },    // 5 ~ LOGOUT_SENT
       { er, er, ee, ee, ee, ee },    // 6 ~ LOGGED_OUT
       { er, er, er, er, er, er } };  // 7 ~ END
@@ -416,36 +426,72 @@ private:
 #undef ee
 #undef er
 
+  header create_header(char msgtype, uint16_t msglen) {
+    header header_;
+    header_.MsgType = msgtype;
+    header_.MsgLen = msglen;
+    header_.ChkSum = 0;
+    header_.Timestamp = get_timestamp();
+
+    return header_;
+  }
+
+  template<typename M>
+  int send_(const M& m) {
+
+    constexpr std::size_t msg_size = sizeof(m);
+    char msg[msg_size];
+    memset(msg, '\0', msg_size);
+    memcpy(msg, &m, msg_size);
+    int result = send(sockfd_, msg, msg_size, 0);
+    
+    return result;
+
+  }
+
+  template<typename M>
+  int receive_(M& m) {
+    
+    constexpr std::size_t msg_size = sizeof(m);
+    char response[msg_size];
+    memset(response, '\0', msg_size);
+    int result = read(sockfd_, response, msg_size);
+    
+    memcpy(&m, response, msg_size);
+    
+    return result;
+    
+  }
+
+  template<typename M>
+  void add_checksum(M& m) {
+    uint16_t checksum = checksum16((uint8_t *)&m, sizeof(m));
+    m.Header.ChkSum = checksum;
+  }
 
   login_request create_login() {
 
-    header header_;
+    header header_ = create_header('L', 109);
     login_request login_;
 
     char User[64], Password[32];
     strcpy(User, "pehlivaniancharles@gmail.com");
     strcpy(Password, "pwd123");
 
-    header_.MsgType = 'L';
-    header_.MsgLen = 109;  
-    header_.ChkSum = 0;
-    header_.Timestamp = get_timestamp();
-  
     login_.Header = header_;
-    memset(login_.User, '\0', sizeof(login_.User));
-    memset(login_.Password, '\0', sizeof(login_.Password));
+    bzero(login_.User, sizeof(login_.User));
+    bzero(login_.Password, sizeof(login_.Password));
     strcpy(login_.User, User);
     strcpy(login_.Password, Password);
 
-    uint16_t checksum = checksum16((uint8_t *)&login_, sizeof(login_));  
-    login_.Header.ChkSum = checksum;
+    add_checksum(login_);
 
     return login_;
   }
   
   submission_request create_submission() {
 
-    header header_;
+    header header_ = create_header('S', 205);
     submission_request submission_;
 
     char Name[64], Email[64], Repo[64];
@@ -453,46 +499,33 @@ private:
     strcpy(Email, "nyc417.protonmail.com");
     strcpy(Repo, "https://github.com/Nowhere");
     
-    header_.MsgType = 'S';
-    header_.MsgLen = 205;
-    header_.ChkSum = 0;
-    header_.Timestamp = get_timestamp();
-
     submission_.Header = header_;
-    memset(submission_.Name, '\0', sizeof(submission_.Name));
-    memset(submission_.Email, '\0', sizeof(submission_.Email));
-    memset(submission_.Repo, '\0', sizeof(submission_.Repo));
+    bzero(submission_.Name, sizeof(submission_.Name));
+    bzero(submission_.Email, sizeof(submission_.Email));
+    bzero(submission_.Repo, sizeof(submission_.Repo));
     strcpy(submission_.Name, Name);
     strcpy(submission_.Email, Email);
     strcpy(submission_.Repo, Repo);
 
-    uint16_t checksum = checksum16((uint8_t *)&submission_, sizeof(submission_));
-    submission_.Header.ChkSum = checksum;
+    add_checksum(submission_);
 
     return submission_;
     
   }
 
   logout_request create_logout() {
-    logout_request msg;
   
-    msg.Header.MsgType = 'O';
-    msg.Header.MsgLen = 46;
-
-    msg.Header.Timestamp = get_timestamp();
-
-    msg.Header.ChkSum = 0;
-    msg.Header.ChkSum = checksum16((uint8_t *)&msg, 109);
+    header header_ = create_header('O', 46);
+    logout_request logout_;
+    
+    logout_.Header = header_;
+    
+    add_checksum(logout_);
   
-    return msg;
+    return logout_;
 
   }
 
 };
 
-auto main(int argc, char **argv) -> int{
-
-  auto S = new Session{"challenge1.vitorian.com", 9009};
-
-  return 0;
-}
+#endif
