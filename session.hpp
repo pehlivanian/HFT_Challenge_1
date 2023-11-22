@@ -1,7 +1,7 @@
 #ifndef __SESSION_HPP__
 #define __SESSION_HPP__
 
-#define DEBUG 1
+#undef DEBUG
  
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -19,11 +19,9 @@
 #include <memory>
 #include <chrono>
 #include <string>
-#include <array>
 #include <vector>
 #include <regex>
 #include <utility>
-#include <iterator>
 #include <algorithm>
 #include <cassert>
 
@@ -217,7 +215,7 @@ private:
 class Session : public FSM<Session> {
 public:
 
-  Session(char* hostname, int port) : hostname_{hostname}, port_{port} { init(); }
+  Session(char* hostname, int port) : hostname_{hostname}, port_{port}, token_{"<UNSET>"} { init(); }
 
   void send_login(EVENTS) {
     assert_current_state(STATES::START);
@@ -230,6 +228,13 @@ public:
 
   };
 
+  void start() { set_state_and_transition(STATES::START, EVENTS::L); }
+
+  // 
+  // Transition functions
+  //
+  // In same translation unit as they are bound at compile time to
+  // state event multiplexor M
   void login_acked(EVENTS) {
 
     assert_current_state(STATES::LOGIN_SENT);
@@ -353,12 +358,10 @@ private:
 	return 1;
       } 
 
-    set_state_and_transition(STATES::START, EVENTS::L);
-
     return 0;
 
   }
-
+  
   int host_lookup(const char* hostname) {
     struct addrinfo hints, *res, *result;
     int errcode;
